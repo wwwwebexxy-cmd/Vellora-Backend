@@ -13,26 +13,29 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # A deployment-provided SECRET_KEY must always override local dotenv values.
-_deployment_secret_key = os.environ.get("SECRET_KEY")
-_deployment_allowed_hosts = os.environ.get("ALLOWED_HOSTS")
+_deployment_secret_key = os.environ.get("VELLORA_SECRET_KEY")
+_deployment_allowed_hosts = os.environ.get("VELLORA_ALLOWED_HOSTS")
 load_dotenv(BASE_DIR / ".env")
 
+def project_env(name, default=None):
+    """Read only this project's prefixed environment variables."""
+    return os.getenv(f"VELLORA_{name}", default)
 
 # SECURITY
 
 SECRET_KEY = (
     _deployment_secret_key
-    or os.getenv("DEPLOYMENT_SECRET_KEY")
-    or os.getenv("SECRET_KEY", "")
+    or project_env("DEPLOYMENT_SECRET_KEY")
+    or project_env("SECRET_KEY", "")
 )
 
-DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
+DEBUG = project_env("DEBUG", "False").lower() in ("true", "1", "t")
 _IS_TESTING = "test" in sys.argv
 
 _allowed_hosts_value = (
     _deployment_allowed_hosts
-    or os.getenv("DEPLOYMENT_ALLOWED_HOSTS")
-    or os.getenv("ALLOWED_HOSTS", "")
+    or project_env("DEPLOYMENT_ALLOWED_HOSTS")
+    or project_env("ALLOWED_HOSTS", "")
 )
 ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_value.split(",") if host.strip()]
 if not DEBUG:
@@ -113,11 +116,11 @@ WSGI_APPLICATION = "myproject.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": os.getenv("DB_HOST","127.0.0.1"),
-        "PORT": os.getenv("DB_PORT","3306"),
+        "NAME": project_env("DB_NAME"),
+        "USER": project_env("DB_USER"),
+        "PASSWORD": project_env("DB_PASSWORD"),
+        "HOST": project_env("DB_HOST", "127.0.0.1"),
+        "PORT": project_env("DB_PORT", "3306"),
     }
 }
 
@@ -188,11 +191,11 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ),
     "DEFAULT_THROTTLE_RATES": {
-        "anon": os.getenv("API_ANON_RATE", "120/min"),
-        "user": os.getenv("API_USER_RATE", "600/min"),
-        "auth": os.getenv("AUTH_RATE", "10/min"),
-        "payment": os.getenv("PAYMENT_RATE", "10/min"),
-        "search": os.getenv("SEARCH_RATE", "60/min"),
+        "anon": project_env("API_ANON_RATE", "120/min"),
+        "user": project_env("API_USER_RATE", "600/min"),
+        "auth": project_env("AUTH_RATE", "10/min"),
+        "payment": project_env("PAYMENT_RATE", "10/min"),
+        "search": project_env("SEARCH_RATE", "60/min"),
     },
     "PAGE_SIZE": 50,
 }
@@ -213,10 +216,10 @@ SIMPLE_JWT = {
 # Browser JWTs stay in HttpOnly cookies.  `None` is only appropriate where
 # the storefront and API are genuinely cross-site; it requires strict CORS and
 # CSRF configuration below.  Lax is the safer default for same-site subdomains.
-JWT_ACCESS_COOKIE_NAME = "eehook_access"
-JWT_REFRESH_COOKIE_NAME = "eehook_refresh"
-JWT_COOKIE_DOMAIN = os.getenv("JWT_COOKIE_DOMAIN", "").strip()
-JWT_COOKIE_SAMESITE = os.getenv("JWT_COOKIE_SAMESITE", "Lax").strip().title()
+JWT_ACCESS_COOKIE_NAME = "vellora_access"
+JWT_REFRESH_COOKIE_NAME = "vellora_refresh"
+JWT_COOKIE_DOMAIN = project_env("JWT_COOKIE_DOMAIN", "").strip()
+JWT_COOKIE_SAMESITE = project_env("JWT_COOKIE_SAMESITE", "Lax").strip().title()
 if JWT_COOKIE_SAMESITE not in {"Lax", "Strict", "None"}:
     raise RuntimeError("JWT_COOKIE_SAMESITE must be Lax, Strict, or None")
 JWT_COOKIE_SECURE = not DEBUG
@@ -224,57 +227,57 @@ JWT_COOKIE_SECURE = not DEBUG
 
 # Google Login
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_ID = project_env("GOOGLE_CLIENT_ID", "").strip()
 
 
 # Email
 
-EMAIL_BACKEND = os.getenv(
+EMAIL_BACKEND = project_env(
     "EMAIL_BACKEND",
     "django.core.mail.backends.smtp.EmailBackend",
 ).strip()
 
-EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp").strip().lower()
+EMAIL_PROVIDER = project_env("EMAIL_PROVIDER", "smtp").strip().lower()
 if EMAIL_PROVIDER == "mailtrap":
-    EMAIL_HOST = os.getenv(
+    EMAIL_HOST = project_env(
         "MAILTRAP_SMTP_HOST",
         "sandbox.smtp.mailtrap.io",
     ).strip()
-    EMAIL_PORT = int(os.getenv("MAILTRAP_SMTP_PORT", "2525"))
+    EMAIL_PORT = int(project_env("MAILTRAP_SMTP_PORT", "2525"))
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
-    EMAIL_HOST_USER = os.getenv(
+    EMAIL_HOST_USER = project_env(
         "MAILTRAP_SMTP_USERNAME",
-        os.getenv("EMAIL_HOST_USER", ""),
+        project_env("EMAIL_HOST_USER", ""),
     ).strip()
-    EMAIL_HOST_PASSWORD = os.getenv(
+    EMAIL_HOST_PASSWORD = project_env(
         "MAILTRAP_SMTP_PASSWORD",
-        os.getenv("EMAIL_HOST_PASSWORD", ""),
+        project_env("EMAIL_HOST_PASSWORD", ""),
     )
-    DEFAULT_FROM_EMAIL = os.getenv(
+    DEFAULT_FROM_EMAIL = project_env(
         "MAILTRAP_FROM_EMAIL",
-        os.getenv("DEFAULT_FROM_EMAIL", "no-reply@eehook.test"),
+        project_env("DEFAULT_FROM_EMAIL", "no-reply@vellora.test"),
     ).strip()
 else:
-    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com").strip()
-    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() in ("true", "1", "t")
-    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").lower() in ("true", "1", "t")
-    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
-    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-    DEFAULT_FROM_EMAIL = os.getenv(
+    EMAIL_HOST = project_env("EMAIL_HOST", "smtp.gmail.com").strip()
+    EMAIL_PORT = int(project_env("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = project_env("EMAIL_USE_TLS", "true").lower() in ("true", "1", "t")
+    EMAIL_USE_SSL = project_env("EMAIL_USE_SSL", "false").lower() in ("true", "1", "t")
+    EMAIL_HOST_USER = project_env("EMAIL_HOST_USER", "").strip()
+    EMAIL_HOST_PASSWORD = project_env("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = project_env(
         "DEFAULT_FROM_EMAIL",
-        EMAIL_HOST_USER or "no-reply@eehook.invalid",
+        EMAIL_HOST_USER or "no-reply@vellora.invalid",
     ).strip()
 
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise RuntimeError("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be enabled")
 
-EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+EMAIL_TIMEOUT = int(project_env("EMAIL_TIMEOUT", "20"))
 # New-order notifications are sent here. Falling back to the SMTP username is
 # convenient for a temporary Mailtrap/Gmail setup while still allowing a
 # separate owner inbox in production.
-ORDER_NOTIFICATION_EMAIL = os.getenv(
+ORDER_NOTIFICATION_EMAIL = project_env(
     "ORDER_NOTIFICATION_EMAIL",
     EMAIL_HOST_USER,
 ).strip()
@@ -282,7 +285,7 @@ ORDER_NOTIFICATION_EMAIL = os.getenv(
 
 # CORS: browser cookies require an explicit, trusted storefront allowlist.
 # Never enable a wildcard origin together with credentials.
-_storefront_origins = os.getenv("STOREFRONT_ORIGINS", os.getenv("CORS_ALLOWED_ORIGINS", ""))
+_storefront_origins = project_env("STOREFRONT_ORIGINS", project_env("CORS_ALLOWED_ORIGINS", ""))
 CORS_ALLOWED_ORIGINS = [origin.strip().rstrip("/") for origin in _storefront_origins.split(",") if origin.strip()]
 # Local Vite development uses HTTP localhost origins. Keep these confined to
 # DEBUG builds; production remains an explicit HTTPS storefront allowlist.
@@ -309,7 +312,7 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 SECURE_SSL_REDIRECT = not (DEBUG or _IS_TESTING)
 # The reverse proxy/load balancer must overwrite X-Forwarded-Proto, not pass a
 # client supplied value through.  This lets Django recognise HTTPS termination.
-if not DEBUG and os.getenv("TRUST_PROXY_SSL_HEADER", "true").lower() in ("true", "1", "t"):
+if not DEBUG and project_env("TRUST_PROXY_SSL_HEADER", "true").lower() in ("true", "1", "t"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True
@@ -319,13 +322,13 @@ CSRF_COOKIE_SECURE = not DEBUG
 # X-CSRFToken header. Authentication JWTs remain HttpOnly.
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = JWT_COOKIE_SAMESITE
-SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
+SECURE_HSTS_SECONDS = int(project_env("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
 
 # Reject oversized request bodies before application code parses them.
-DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)))
-FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", str(5 * 1024 * 1024)))
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(project_env("DATA_UPLOAD_MAX_MEMORY_SIZE", str(10 * 1024 * 1024)))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(project_env("FILE_UPLOAD_MAX_MEMORY_SIZE", str(5 * 1024 * 1024)))
 
 # Throttling, token blacklisting, and abuse protections must use a shared
 # cache in production. LocMemCache is safe only for a single local process.
@@ -337,7 +340,7 @@ if DEBUG or _IS_TESTING:
         }
     }
 else:
-    MEMCACHED_LOCATION = os.getenv("MEMCACHED_LOCATION", "").strip()
+    MEMCACHED_LOCATION = project_env("MEMCACHED_LOCATION", "").strip()
     if not MEMCACHED_LOCATION:
         raise RuntimeError(
             "MEMCACHED_LOCATION must be configured when DEBUG=False "
@@ -354,45 +357,45 @@ else:
             },
         }
     }
-GLOBAL_RATE_LIMIT = int(os.getenv("GLOBAL_RATE_LIMIT", "300"))
-GLOBAL_RATE_WINDOW = int(os.getenv("GLOBAL_RATE_WINDOW", "60"))
-ADMIN_LOGIN_MAX_ATTEMPTS = int(os.getenv("ADMIN_LOGIN_MAX_ATTEMPTS", "5"))
-ADMIN_LOGIN_WINDOW = int(os.getenv("ADMIN_LOGIN_WINDOW", "900"))
+GLOBAL_RATE_LIMIT = int(project_env("GLOBAL_RATE_LIMIT", "300"))
+GLOBAL_RATE_WINDOW = int(project_env("GLOBAL_RATE_WINDOW", "60"))
+ADMIN_LOGIN_MAX_ATTEMPTS = int(project_env("ADMIN_LOGIN_MAX_ATTEMPTS", "5"))
+ADMIN_LOGIN_WINDOW = int(project_env("ADMIN_LOGIN_WINDOW", "900"))
 
 
 # Frontend URL
 
-SITE_URL = os.getenv("SITE_URL", "http://localhost:5173").rstrip("/")
+SITE_URL = project_env("SITE_URL", "http://localhost:5173").rstrip("/")
 if not (DEBUG or _IS_TESTING) and not SITE_URL.startswith("https://"):
     raise RuntimeError("SITE_URL must use HTTPS when DEBUG=False")
 
 # Django's password-reset token generator checks this value when validating a
 # token. Keep the lifetime explicit so local and production deployments use
 # the same security policy instead of relying on Django's default.
-PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT", "3600"))
+PASSWORD_RESET_TIMEOUT = int(project_env("PASSWORD_RESET_TIMEOUT", "3600"))
 
 
 # Cashfree Payments
 
-CASHFREE_ENABLED = os.getenv("CASHFREE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
-CASHFREE_ENV = os.getenv("CASHFREE_ENV", "sandbox").strip().lower()
-CASHFREE_CLIENT_ID = os.getenv("CASHFREE_CLIENT_ID", "").strip()
-CASHFREE_CLIENT_SECRET = os.getenv("CASHFREE_CLIENT_SECRET", "").strip()
-CASHFREE_ORDER_CURRENCY = os.getenv("CASHFREE_ORDER_CURRENCY", "INR").strip().upper()
-CASHFREE_WEBHOOK_URL = os.getenv("CASHFREE_WEBHOOK_URL", "").strip()
+CASHFREE_ENABLED = project_env("CASHFREE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+CASHFREE_ENV = project_env("CASHFREE_ENV", "sandbox").strip().lower()
+CASHFREE_CLIENT_ID = project_env("CASHFREE_CLIENT_ID", "").strip()
+CASHFREE_CLIENT_SECRET = project_env("CASHFREE_CLIENT_SECRET", "").strip()
+CASHFREE_ORDER_CURRENCY = project_env("CASHFREE_ORDER_CURRENCY", "INR").strip().upper()
+CASHFREE_WEBHOOK_URL = project_env("CASHFREE_WEBHOOK_URL", "").strip()
 
 # Legacy Stripe settings remain available for historical checkout records.
 
-STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+STRIPE_PUBLISHABLE_KEY = project_env("STRIPE_PUBLISHABLE_KEY")
+STRIPE_SECRET_KEY = project_env("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = project_env("STRIPE_WEBHOOK_SECRET")
 
 # WhatsApp Cloud API. The owner number is stored as digits only, including
 # country code (971547369369), as required by Meta's API.
-WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
-WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
-WHATSAPP_OWNER_PHONE = os.getenv("WHATSAPP_OWNER_PHONE", "971547369369")
-WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v22.0")
+WHATSAPP_ACCESS_TOKEN = project_env("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = project_env("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_OWNER_PHONE = project_env("WHATSAPP_OWNER_PHONE", "971547369369")
+WHATSAPP_API_VERSION = project_env("WHATSAPP_API_VERSION", "v22.0")
 
 
 # Default primary key

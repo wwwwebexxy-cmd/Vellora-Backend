@@ -162,7 +162,7 @@ def _safe_session_user(user):
         "first_name": user.first_name,
         "role": user.role,
         "permissions": {"is_super_admin": is_super_admin},
-        "redirect_to": "/mittyco-dashboard" if is_super_admin else "/",
+        "redirect_to": "/vellora-dashboard" if is_super_admin else "/",
     }
 
 
@@ -408,10 +408,10 @@ def forgot_password(request):
             else:
                 try:
                     send_mail(
-                        subject="Reset your eehook password",
+                        subject="Reset your vellora password",
                         message=f"""Hello {user.first_name or 'there'},
 
-Use the link below to reset your eehook password. This link expires according to the server's password-reset policy and can only be used once.
+Use the link below to reset your vellora password. This link expires according to the server's password-reset policy and can only be used once.
 
 {reset_link}
 
@@ -421,7 +421,7 @@ If you did not request this, you can ignore this email.
                         recipient_list=[user.email],
                         html_message=f"""
 <p>Hello {greeting_name},</p>
-<p>Use the button below to reset your eehook password. This link expires according to the server's password-reset policy and can only be used once.</p>
+<p>Use the button below to reset your vellora password. This link expires according to the server's password-reset policy and can only be used once.</p>
 <p><a href="{escaped_reset_link}">Reset Password</a></p>
 <p>If you did not request this, you can ignore this email.</p>
 """,
